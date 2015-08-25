@@ -1,0 +1,9 @@
+# Dependency files
+*.d
+
+# Build files
+*.o
+hashi
+
+# Tests
+Tests/
