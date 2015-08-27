@@ -2,11 +2,12 @@
 #define ISLANDITERATOR_H
 
 #include "Coordinate.h"
+#include <iterator>
 
 class Grid;
 
 // Iterates across islands in a grid
-class IslandIterator {
+class IslandIterator : std::iterator<std::forward_iterator_tag, Coordinate>{
 public:
     IslandIterator();
     IslandIterator( Grid* );

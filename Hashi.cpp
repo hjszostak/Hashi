@@ -1,5 +1,6 @@
 #include "Hashi.h"
 #include <string>
+#include <algorithm>
 
 using namespace std;
 
@@ -167,14 +168,66 @@ SolveStatus Hashi::status() const {
             return UNSOLVABLE;
     }
 
+    unsigned int numIslands = count_if( grid_->beginIsland(), grid_->endIsland(), [](Coordinate){ return true; } );
+
+    // Check for isolated groups
+    vector<Coordinate> checked;
     for ( auto it = grid_->beginIsland(); it != grid_->endIsland(); ++it ) {
-        if ( currentIslandValue( *it ) != grid_->value( *it ) )
-            return UNSOLVED;
+        // skip if we already checked this island
+        if ( checked.end() != find( checked.begin(), checked.end(), *it ) )
+            continue;
+
+        // Find connected islands
+        vector<Coordinate> connected;
+        connected.push_back( *it );
+        unsigned int lastSize = 0;
+
+        while ( lastSize < connected.size() ) {
+            lastSize = connected.size();
+            vector<Coordinate> last = connected;
+
+            for_each( last.begin(), last.end(),
+            [ &connected, this ] ( Coordinate c ) {
+                for ( Direction d = UP; d != DIRECTION_COUNT; d = Direction( d + 1 ) ) {
+                    if ( grid_->beginBridge( c, d ) == grid_->endBridge() )
+                        continue;
+
+                    // Skip if no bridge exists
+                    Coordinate cur = *( grid_->beginBridge( c, d ) );
+                    if ( grid_->value( cur ) == 0 )
+                        continue;
+
+                    bool isHorizontal = d == LEFT || d == RIGHT;
+                    if ( isHorizontal xor grid_->isHorizontal( cur ) )
+                        continue;
+
+                    // Add to connected if not already added
+                    Coordinate other = grid_->beginBridge( c, d ).otherIsland();
+                    if ( connected.end() == find( connected.begin(), connected.end(), other ) )
+                        connected.push_back( other );
+                }
+            } );
+        }
+
+        // check for unsatisfied island
+        auto findResult = find_if( connected.begin(), connected.end(),
+        [ this ] ( Coordinate c2 )->bool {
+            return currentIslandValue( c2 ) != grid_->value( c2 );
+        } );
+
+        if ( connected.end() != findResult ) {
+            copy( connected.begin(), connected.end(), back_inserter( checked ) );
+            continue;
+        }
+
+        // All connected islands are satisfied
+        if ( connected.size() == numIslands )
+            return SOLVED;
+        else
+            return UNSOLVABLE;
     }
 
-    // TODO: make sure islands aren't in seperate groups
-
-    return SOLVED;
+    return UNSOLVED;
 }
 
 ostream& operator<< ( ostream& sout, const Hashi& h ) {
